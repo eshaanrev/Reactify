@@ -3,7 +3,12 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Reactify</title>
+  <meta name="description" content="Reactify is a minimal browser game that measures your reaction time in milliseconds and tracks your best score.">
+  <meta name="theme-color" content="#1a1a2e">
+  <meta property="og:title" content="Reactify — Test your reaction time">
+  <meta property="og:description" content="Click as soon as the screen changes and see how fast your reflexes are. Tracks your best time.">
+  <meta property="og:type" content="website">
+  <title>Reactify — Reaction Time Test</title>
   <link rel="icon" type="image/png" href="reactify.png">
   <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
@@ -86,7 +91,16 @@
     var endTime;
     var result;
     var timer;
+    var waitTimer;
+    var BEST_KEY = 'reactify.bestTime';
     $('#reset-button').hide();
+
+    function loadBestTime() {
+      var stored = parseInt(localStorage.getItem(BEST_KEY), 10);
+      if (!isNaN(stored)) {
+        $('#highscore').text(stored);
+      }
+    }
     
     function calculateMarkerPosition(time) {
       const minTime = 110; 
@@ -135,21 +149,28 @@
     }
     
     function reflexTest() {
-      console.log("entering function reflexTest");
       $('#reflex-button').css('background-color', 'var(--success)');
       $('#reflex-button').removeClass('waiting');
       $('h2').text('Click the button when it turns red');
-      var time = Math.random() * 5;
-      var ms = Math.round(time * 1000);
-      console.log("time:", ms);
-      setTimeout(trigger, ms);
+      var ms = Math.round((Math.random() * 4 + 1) * 1000);
+      waitTimer = setTimeout(trigger, ms);
       $('#reflex-button').off();
+      $('#reflex-button').click(tooSoon);
     }
-    
+
+    function tooSoon() {
+      clearTimeout(waitTimer);
+      $('#reflex-button').off();
+      $('#reflex-button').css('background-color', 'var(--warning)');
+      $('h2').text('Too soon! Wait for the button to turn red.');
+      $("#reset-button").show();
+    }
+
     function trigger() {
       $('#reflex-button').css('background-color', 'var(--danger)');
       $('h2').text('Click now!');
       startTime = Date.now();
+      $('#reflex-button').off();
       $('#reflex-button').click(endTest);
       timer = setTimeout(gameover, 3000);
     }
@@ -159,17 +180,15 @@
       clearTimeout(timer);
       endTime = Date.now();
       result = endTime - startTime;
-      console.log(result);
       $('h2').text(`Your time: ${result} ms`);
       $('#reflex-button').off();
       $('#performance-scale').fadeIn(500);
       setPerformanceRanking(result);
-      
+
       var currentHS = $('#highscore').text();
-      if (currentHS == 'None') {
+      if (currentHS == 'None' || parseInt(currentHS) > result) {
         $('#highscore').text(result);
-      } else if (parseInt(currentHS) > result) {
-        $('#highscore').text(result);
+        localStorage.setItem(BEST_KEY, result);
         $('#highscore').css('color', '#00c853');
         setTimeout(() => {
           $('#highscore').css('color', 'var(--secondary)');
@@ -182,6 +201,7 @@
       $('#reflex-button').css('background-color', 'var(--waiting)');
       $('#reflex-button').addClass('waiting');
       $('h2').text('Click the blue button to begin');
+      $('#reflex-button').off();
       $("#reflex-button").click(reflexTest);
       $("#reset-button").hide();
       $('#reflex-button').text('');
@@ -199,6 +219,7 @@
     
     $(document).ready(function() {
       createParticles();
+      loadBestTime();
       $("#reflex-button").click(reflexTest);
       $("#reset-button").click(reset);
       $('#performance-scale').hide();
